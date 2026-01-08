@@ -35,34 +35,72 @@ def render_header():
 def render_introduction():
     """Render the educational introduction section."""
     with st.expander("What is Least Squares? (Click to learn!)", expanded=False):
+        st.markdown("### The Problem")
         st.markdown("""
-        ### Understanding Least Squares
+        Sometimes we have a system of equations that **has no exact solution**. 
+        This happens when we have more equations than unknowns (for example, trying to fit a line through many data points).
         
-        The **Least Squares Method** finds the best approximate solution to a system of equations 
-        that has no exact solution (overdetermined system).
-        
-        **When do we use it?**
-        - When we have more equations than unknowns
-        - When we want to fit a line/curve through data points
-        - When we want to minimize the total error
-        
-        **The Normal Equation:**
+        In these cases, we can't find a perfect answer, but we can find the **best approximate answer** — 
+        one that gets as close as possible to all our data points.
         """)
-        st.latex(r"A^T A \hat{x} = A^T b")
+        
+        st.markdown("### What is Least Squares?")
         st.markdown("""
-        **The Solution:**
+        The **Least Squares Method** finds the best approximate solution by **minimizing the total error**.
+        
+        Think of it this way: if we can't hit the target exactly, we want to get as close as possible. 
+        The "least squares" solution is the one where the sum of all squared errors is the smallest.
         """)
-        st.latex(r"\hat{x} = (A^T A)^{-1} A^T b")
-        st.markdown("""
-        **Error (Residual):**
-        """)
-        st.latex(r"\|\vec{b} - A\hat{x}\|")
+        
+        st.markdown("### The Math (Made Simple)")
+        st.markdown("We start with a system of equations:")
+        st.latex(r"A\vec{x} = \vec{b}")
+        
         st.markdown("""
         Where:
-        - **A** = coefficient matrix (your data)
-        - **b** = target/output vector
-        - **x̂** = the best solution that minimizes error
-        - **Aᵀ** = transpose of A
+        - **A** is a table of numbers (matrix) representing our data
+        - **x** is what we're trying to find
+        - **b** is our target values
+        """)
+        
+        st.markdown("Since we can't solve this exactly, we look for the best estimate:")
+        st.latex(r"\hat{x}")
+        st.markdown("(read as 'x-hat')")
+        
+        st.markdown("---")
+        st.markdown("### The Error")
+        st.markdown("The error is the difference between our target and what we get:")
+        st.latex(r"\vec{b} - A\hat{x} = \begin{bmatrix} e_1 \\ e_2 \\ \vdots \\ e_n \end{bmatrix}")
+        
+        st.markdown("The **least-squares error** is:")
+        st.latex(r"\|\vec{b} - A\hat{x}\| = \sqrt{e_1^2 + e_2^2 + \cdots + e_n^2}")
+        
+        st.markdown("""
+        We call it "least squares" because we're **minimizing the sum of squared errors**.
+        """)
+        
+        st.markdown("---")
+        st.markdown("### The Solution")
+        st.markdown("To find the best answer, we solve what's called the **Normal Equation**:")
+        st.latex(r"A^T A \hat{x} = A^T \vec{b}")
+        
+        st.markdown("Which gives us the formula:")
+        st.latex(r"\hat{x} = (A^T A)^{-1} A^T \vec{b}")
+        
+        st.markdown("""
+        Where:
+        - **Aᵀ** is A "flipped" (transposed) — rows become columns
+        - **(AᵀA)⁻¹** is the inverse (like dividing by AᵀA)
+        """)
+        
+        st.markdown("---")
+        st.markdown("### Real-World Example")
+        st.markdown("""
+        **Fitting a line through data points:**
+        
+        If you have several (x, y) points and want to draw the best straight line through them, 
+        you're solving a least squares problem! The method finds the line that minimizes 
+        the total distance from each point to the line.
         """)
 
 

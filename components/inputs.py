@@ -4,11 +4,10 @@ Input Components Module
 Handles all user input forms and parsing for the Least Squares Calculator.
 Provides two input modes:
     1. Data Points (Easy) - Enter x,y coordinates for line fitting
-    2. Matrix Input (Advanced) - Enter matrix A and vector b using editable tables
+    2. Matrix Input (Advanced) - Enter matrix A and vector b using clean text inputs
 """
 import streamlit as st
 import numpy as np
-import pandas as pd
 from typing import Tuple, Optional
 
 
@@ -47,79 +46,88 @@ def render_data_points_input() -> Tuple[str, str]:
 
 def render_matrix_input() -> Tuple[np.ndarray, np.ndarray, str]:
     """
-    Render the matrix input form using editable tables (Advanced mode).
+    Render the matrix input form using clean text inputs (Advanced mode).
     
     Returns:
         Tuple of (A, b, error_message)
     """
     st.header("Enter Matrix A and Vector b")
     st.latex(r"A\hat{x} = \vec{b}")
-    st.info("**Tip:** Edit the cells directly. Use the controls to adjust matrix dimensions.")
     
     # Matrix dimension controls
-    col1, col2, col3 = st.columns([1, 1, 2])
+    col1, col2, col3 = st.columns([1, 1, 3])
     with col1:
-        num_rows = st.number_input("Number of rows (m)", min_value=2, max_value=10, value=5, step=1)
+        num_rows = st.number_input("Rows (m)", min_value=2, max_value=10, value=3, step=1)
     with col2:
-        num_cols = st.number_input("Number of columns (n)", min_value=1, max_value=5, value=2, step=1)
+        num_cols = st.number_input("Columns (n)", min_value=1, max_value=5, value=2, step=1)
+    
+    num_rows = int(num_rows)
+    num_cols = int(num_cols)
     
     st.markdown("---")
     
-    # Create default data
-    col1, col2 = st.columns([2, 1])
+    # Default values
+    default_A = [[0, 1], [1, 1], [2, 1]]
+    default_b = [6, 0, 0]
     
-    with col1:
+    # Create layout with proper spacing
+    col_a, spacer, col_b = st.columns([num_cols * 2, 1, 2])
+    
+    with col_a:
         st.latex(r"A =")
         
-        # Create default matrix A data
-        default_A = []
-        for i in range(int(num_rows)):
-            row = [float(i + 1)] + [1.0] * (int(num_cols) - 1)
-            default_A.append(row[:int(num_cols)])
-        
-        # Column names for matrix A
-        col_names = [f"a{j+1}" for j in range(int(num_cols))]
-        
-        df_A = pd.DataFrame(default_A, columns=col_names)
-        
-        # Editable dataframe for matrix A
-        edited_A = st.data_editor(
-            df_A,
-            num_rows="fixed",
-            use_container_width=False,
-            hide_index=True,
-            key="matrix_A"
-        )
+        # Create matrix A input grid
+        A_values = []
+        for i in range(num_rows):
+            cols = st.columns(num_cols)
+            row_values = []
+            for j in range(num_cols):
+                with cols[j]:
+                    # Get default value
+                    if i < len(default_A) and j < len(default_A[i]):
+                        default_val = str(default_A[i][j])
+                    else:
+                        default_val = "0"
+                    
+                    val = st.text_input(
+                        f"a_{i+1}{j+1}",
+                        value=default_val,
+                        key=f"A_{i}_{j}",
+                        label_visibility="collapsed"
+                    )
+                    try:
+                        row_values.append(float(val) if val else 0.0)
+                    except ValueError:
+                        row_values.append(0.0)
+            A_values.append(row_values)
     
-    with col2:
+    with col_b:
         st.latex(r"\vec{b} =")
         
-        # Create default vector b data
-        default_b = [[2.1], [4.0], [5.8], [8.1], [9.9]]
-        # Adjust to match number of rows
-        while len(default_b) < int(num_rows):
-            default_b.append([0.0])
-        default_b = default_b[:int(num_rows)]
-        
-        df_b = pd.DataFrame(default_b, columns=["b"])
-        
-        # Editable dataframe for vector b
-        edited_b = st.data_editor(
-            df_b,
-            num_rows="fixed",
-            use_container_width=False,
-            hide_index=True,
-            key="vector_b"
-        )
+        # Create vector b input (single column)
+        b_values = []
+        for i in range(num_rows):
+            # Get default value
+            if i < len(default_b):
+                default_val = str(default_b[i])
+            else:
+                default_val = "0"
+            
+            val = st.text_input(
+                f"b_{i+1}",
+                value=default_val,
+                key=f"b_{i}",
+                label_visibility="collapsed"
+            )
+            try:
+                b_values.append(float(val) if val else 0.0)
+            except ValueError:
+                b_values.append(0.0)
     
     # Convert to numpy arrays
     try:
-        A = edited_A.values.astype(float)
-        b = edited_b.values.flatten().astype(float)
-        
-        # Validation
-        if A.shape[0] != len(b):
-            return None, None, f"Matrix A has {A.shape[0]} rows but vector b has {len(b)} elements. They must match!"
+        A = np.array(A_values, dtype=float)
+        b = np.array(b_values, dtype=float)
         
         return A, b, ""
     
@@ -130,32 +138,20 @@ def render_matrix_input() -> Tuple[np.ndarray, np.ndarray, str]:
 def parse_data_points(x_input: str, y_input: str) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], str]:
     """
     Parse x and y input strings into numpy arrays.
-    
-    Args:
-        x_input: Raw string of x values
-        y_input: Raw string of y values
-    
-    Returns:
-        Tuple of (x_values, y_values, error_message)
-        If successful, error_message is empty.
-        If failed, arrays are None and error_message contains the error.
     """
     try:
-        # Parse x values (handle both newline and comma separation)
         x_values = np.array([
             float(x.strip()) 
             for x in x_input.replace(',', '\n').split('\n') 
             if x.strip()
         ])
         
-        # Parse y values
         y_values = np.array([
             float(y.strip()) 
             for y in y_input.replace(',', '\n').split('\n') 
             if y.strip()
         ])
         
-        # Validation
         if len(x_values) != len(y_values):
             return None, None, "X and Y must have the same number of values!"
         
@@ -171,7 +167,7 @@ def parse_data_points(x_input: str, y_input: str) -> Tuple[Optional[np.ndarray],
 def parse_matrix_input(a_input: str, b_input: str) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], str]:
     """
     Parse matrix A and vector b input strings into numpy arrays.
-    This function is kept for backwards compatibility but is not used in table mode.
+    This function is kept for backwards compatibility.
     """
     try:
         A = np.array([

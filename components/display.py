@@ -184,7 +184,7 @@ def render_final_result(result: LeastSquaresResult, is_data_points_mode: bool, u
 
 
 def render_visualization(result: LeastSquaresResult, is_data_points_mode: bool, x_values: np.ndarray = None):
-    """Render the matplotlib visualization with best-fit line for all modes."""
+    """Render the matplotlib visualization with best-fit line and geometric interpretation."""
     st.header("Visualization")
     
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
@@ -223,19 +223,86 @@ def render_visualization(result: LeastSquaresResult, is_data_points_mode: bool, 
         ax1.set_xticklabels([f'x_{i+1}' for i in range(len(result.x_hat))])
     ax1.grid(True, alpha=0.3)
     
-    # Plot 2: Residuals
+    # Plot 2: Geometric Interpretation (Column Space Projection)
     ax2 = axes[1]
-    if x_values is not None:
-        ax2.stem(x_values, result.residuals, linefmt='#764ba2', markerfmt='o', basefmt='gray')
-        ax2.set_xlabel('X', fontsize=12)
-    else:
-        ax2.stem(range(len(result.residuals)), result.residuals, 
-                linefmt='#764ba2', markerfmt='o', basefmt='gray')
-        ax2.set_xlabel('Observation Index', fontsize=12)
     
-    ax2.axhline(y=0, color='#38ef7d', linestyle='--', linewidth=2)
-    ax2.set_ylabel('Residual (Error)', fontsize=12)
-    ax2.set_title('Residuals (b - Ax̂)', fontsize=14, fontweight='bold')
+    # For visualization, we'll show the relationship between b, Ax̂ (projection), and error
+    # Using first 2-3 components for visualization
+    b = result.b
+    Ax_hat = result.predicted  # This is Ax̂
+    residual = result.residuals  # This is b - Ax̂
+    
+    n_dim = min(3, len(b))
+    
+    if n_dim >= 2:
+        # 2D visualization of vectors
+        ax2.set_xlim(-1, max(abs(b[:2].max()), abs(Ax_hat[:2].max())) * 1.5 + 1)
+        ax2.set_ylim(-1, max(abs(b[:2].max()), abs(Ax_hat[:2].max())) * 1.5 + 1)
+        
+        # Origin
+        origin = np.array([0, 0])
+        
+        # Draw b vector (target)
+        ax2.annotate('', xy=(b[0], b[1]), xytext=origin,
+                    arrowprops=dict(arrowstyle='->', color='#667eea', lw=2.5))
+        ax2.annotate(r'$\vec{b}$', xy=(b[0], b[1]), fontsize=14, color='#667eea',
+                    xytext=(5, 5), textcoords='offset points')
+        
+        # Draw Ax̂ vector (projection onto column space)
+        ax2.annotate('', xy=(Ax_hat[0], Ax_hat[1]), xytext=origin,
+                    arrowprops=dict(arrowstyle='->', color='#38ef7d', lw=2.5))
+        ax2.annotate(r'$A\hat{x}$', xy=(Ax_hat[0], Ax_hat[1]), fontsize=14, color='#38ef7d',
+                    xytext=(5, -15), textcoords='offset points')
+        
+        # Draw error vector (b - Ax̂) - from Ax̂ to b
+        ax2.annotate('', xy=(b[0], b[1]), xytext=(Ax_hat[0], Ax_hat[1]),
+                    arrowprops=dict(arrowstyle='->', color='#ff6b6b', lw=2, linestyle='--'))
+        mid_x = (b[0] + Ax_hat[0]) / 2
+        mid_y = (b[1] + Ax_hat[1]) / 2
+        ax2.annotate(r'$\vec{b} - A\hat{x}$', xy=(mid_x, mid_y), fontsize=12, color='#ff6b6b',
+                    xytext=(10, 0), textcoords='offset points')
+        
+        # Draw right angle indicator if error is perpendicular to Ax̂
+        # (showing orthogonality)
+        scale = 0.3
+        if np.linalg.norm(Ax_hat[:2]) > 0.1:
+            # Perpendicular indicator
+            perp_dir = np.array([-Ax_hat[1], Ax_hat[0]]) / np.linalg.norm(Ax_hat[:2]) * scale
+            corner = Ax_hat[:2] - Ax_hat[:2] / np.linalg.norm(Ax_hat[:2]) * scale
+            ax2.plot([corner[0], corner[0] + perp_dir[0]], 
+                    [corner[1], corner[1] + perp_dir[1]], 
+                    color='gray', lw=1)
+            ax2.plot([corner[0] + perp_dir[0], Ax_hat[0] + perp_dir[0]], 
+                    [corner[1] + perp_dir[1], Ax_hat[1] + perp_dir[1]], 
+                    color='gray', lw=1)
+        
+        # Labels and styling
+        ax2.axhline(y=0, color='gray', linestyle='-', lw=0.5)
+        ax2.axvline(x=0, color='gray', linestyle='-', lw=0.5)
+        ax2.set_xlabel('Component 1', fontsize=12)
+        ax2.set_ylabel('Component 2', fontsize=12)
+        ax2.set_title('Geometric Interpretation', fontsize=14, fontweight='bold')
+        ax2.set_aspect('equal', adjustable='box')
+        
+        # Legend
+        from matplotlib.lines import Line2D
+        legend_elements = [
+            Line2D([0], [0], color='#667eea', lw=2, label=r'$\vec{b}$ (target)'),
+            Line2D([0], [0], color='#38ef7d', lw=2, label=r'$A\hat{x}$ (projection)'),
+            Line2D([0], [0], color='#ff6b6b', lw=2, linestyle='--', label=r'$\vec{b} - A\hat{x}$ (error)')
+        ]
+        ax2.legend(handles=legend_elements, loc='upper left', fontsize=9)
+        
+        # Add column space label
+        ax2.text(0.95, 0.05, 'Col(A)', transform=ax2.transAxes, fontsize=12,
+                fontweight='bold', color='#764ba2', ha='right', va='bottom')
+    else:
+        # Fallback for 1D
+        ax2.bar(['b', 'Ax̂', 'b - Ax̂'], [b[0], Ax_hat[0], residual[0]], 
+               color=['#667eea', '#38ef7d', '#ff6b6b'])
+        ax2.set_ylabel('Value', fontsize=12)
+        ax2.set_title('Vector Components', fontsize=14, fontweight='bold')
+    
     ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()

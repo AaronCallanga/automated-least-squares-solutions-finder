@@ -89,13 +89,12 @@ streamlit run app.py
 
 ## Group 1 | Automated Least Squares Solutions Finder
 
-| Name | Role |
-|------|------|
-| Mark Jason Manlapaz | Developer |
-| Jomar Escala | Developer |
-| Christine Rio | Developer |
-| Anthony Bonito | Developer |
-| Aaron Dave Callanga | Developer |
+Names:
+- Mark Jason Manlapaz
+- Jomar Escala
+- Christine Rio
+- Anthony Bonito
+- Aaron Dave Callanga
 
 ---
 

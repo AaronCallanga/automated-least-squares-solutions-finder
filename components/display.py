@@ -48,15 +48,15 @@ def render_step_problem(result: LeastSquaresResult):
     st.write("We want to solve **Ax = b** using the least squares formula:")
     st.latex(r"\hat{x} = (A^T A)^{-1} A^T b")
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns([1, 1, 2])
     with col1:
         st.write("**Matrix A:**")
-        st.write(result.A)
-        st.write(f"Shape: {result.A.shape[0]} rows × {result.A.shape[1]} columns")
+        st.dataframe(result.A, hide_index=True, use_container_width=False)
+        st.caption(f"Shape: {result.A.shape[0]} × {result.A.shape[1]}")
     with col2:
         st.write("**Vector b:**")
-        st.write(result.b)
-        st.write(f"Shape: {len(result.b)} elements")
+        st.dataframe(result.b, hide_index=True, use_container_width=False)
+        st.caption(f"Shape: {len(result.b)} elements")
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -66,9 +66,12 @@ def render_step_transpose(result: LeastSquaresResult):
     st.subheader("Step 2️⃣: Calculate Aᵀ (Transpose of A)")
     st.write("The transpose flips rows and columns:")
     st.latex(r"A^T = \text{swap rows and columns of } A")
-    st.write("**Aᵀ =**")
-    st.write(result.A_transpose)
-    st.write(f"Shape changed from {result.A.shape} → {result.A_transpose.shape}")
+    
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.write("**Aᵀ =**")
+        st.dataframe(result.A_transpose, hide_index=True, use_container_width=False)
+        st.caption(f"Shape: {result.A.shape} → {result.A_transpose.shape}")
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -78,9 +81,12 @@ def render_step_ATA(result: LeastSquaresResult):
     st.subheader("Step 3️⃣: Calculate AᵀA (Matrix Multiplication)")
     st.write("Multiply Aᵀ by A:")
     st.latex(r"A^T A = A^T \times A")
-    st.write("**AᵀA =**")
-    st.write(result.ATA)
-    st.write(f"Result shape: {result.ATA.shape[0]} × {result.ATA.shape[1]} (square matrix)")
+    
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.write("**AᵀA =**")
+        st.dataframe(result.ATA, hide_index=True, use_container_width=False)
+        st.caption(f"Shape: {result.ATA.shape[0]} × {result.ATA.shape[1]} (square)")
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -90,9 +96,13 @@ def render_step_inverse(result: LeastSquaresResult):
     st.subheader("Step 4️⃣: Calculate (AᵀA)⁻¹ (Inverse)")
     st.write("Find the inverse of AᵀA:")
     st.latex(r"(A^T A)^{-1}")
-    st.write("**(AᵀA)⁻¹ =**")
-    st.write(result.ATA_inverse)
-    st.success("✅ Matrix is invertible!")
+    
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.write("**(AᵀA)⁻¹ =**")
+        st.dataframe(result.ATA_inverse, hide_index=True, use_container_width=False)
+    with col2:
+        st.success("✅ Matrix is invertible!")
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -102,8 +112,11 @@ def render_step_ATb(result: LeastSquaresResult):
     st.subheader("Step 5️⃣: Calculate Aᵀb")
     st.write("Multiply Aᵀ by b:")
     st.latex(r"A^T b = A^T \times b")
-    st.write("**Aᵀb =**")
-    st.write(result.ATb)
+    
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.write("**Aᵀb =**")
+        st.dataframe(result.ATb, hide_index=True, use_container_width=False)
     st.markdown('</div>', unsafe_allow_html=True)
 
 

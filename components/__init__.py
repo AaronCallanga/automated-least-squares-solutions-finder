@@ -1,5 +1,5 @@
 # Components package
-from .inputs import render_data_points_input, render_matrix_input, parse_data_points, parse_matrix_input
+from .inputs import render_data_points_input, render_matrix_input, render_linear_system_input, parse_data_points, parse_matrix_input
 from .display import (
     render_header,
     render_introduction,

@@ -54,12 +54,15 @@ def render_matrix_input() -> Tuple[np.ndarray, np.ndarray, str]:
     st.header("Enter Matrix A and Vector b")
     st.latex(r"A\hat{x} = \vec{b}")
     
-    # Matrix dimension controls
-    col1, col2, col3 = st.columns([1, 1, 3])
-    with col1:
-        num_rows = st.number_input("Rows (m)", min_value=2, max_value=10, value=3, step=1)
-    with col2:
-        num_cols = st.number_input("Columns (n)", min_value=1, max_value=5, value=2, step=1)
+    # Matrix dimension controls - centered
+    left_spacer, center_col, right_spacer = st.columns([2, 3, 2])
+    with center_col:
+        st.markdown("**Matrix Dimensions**")
+        dim_col1, dim_col2 = st.columns(2)
+        with dim_col1:
+            num_rows = st.number_input("Rows (m)", min_value=2, max_value=10, value=3, step=1)
+        with dim_col2:
+            num_cols = st.number_input("Columns (n)", min_value=1, max_value=5, value=2, step=1)
     
     num_rows = int(num_rows)
     num_cols = int(num_cols)
@@ -189,3 +192,137 @@ def parse_matrix_input(a_input: str, b_input: str) -> Tuple[Optional[np.ndarray]
     
     except ValueError as e:
         return None, None, f"Invalid input! Please check your matrix format. Error: {e}"
+
+
+def render_linear_system_input() -> Tuple[np.ndarray, np.ndarray, str]:
+    """
+    Render the linear system input form where users enter equations directly.
+    
+    Example equations:
+        x1 + 2x2 = 4
+        2x1 - x2 = 3
+        x1 + 3x2 = 6
+    
+    Returns:
+        Tuple of (A, b, error_message)
+    """
+    st.header("Enter System of Linear Equations")
+    st.latex(r"A\vec{x} = \vec{b}")
+    
+    st.info("""
+    **How to enter equations:**
+    - Use `x1`, `x2`, `x3`, etc. for variables
+    - Use `+` and `-` for operations
+    - Each equation on a new line
+    - Example: `2x1 + 3x2 = 5` or `x1 - 2x2 + x3 = 10`
+    """)
+    
+    # Default example equations
+    default_equations = """x1 + 2x2 = 4
+2x1 - x2 = 3
+x1 + 3x2 = 6"""
+    
+    equations_input = st.text_area(
+        "Enter your equations (one per line):",
+        value=default_equations,
+        height=150,
+        help="Enter linear equations with variables x1, x2, x3, etc."
+    )
+    
+    # Parse the equations
+    try:
+        A, b, num_vars = parse_linear_system(equations_input)
+        
+        if A is not None:
+            # Show extracted matrices
+            st.markdown("---")
+            st.markdown("**Extracted from equations:**")
+            
+            col1, col2, col3 = st.columns([2, 1, 2])
+            with col1:
+                st.latex(r"A = ")
+                st.dataframe(A, hide_index=True, use_container_width=False)
+            with col2:
+                var_names = [f"x{i+1}" for i in range(num_vars)]
+                st.latex(r"\vec{x} = ")
+                st.write(var_names)
+            with col3:
+                st.latex(r"\vec{b} = ")
+                st.dataframe(b, hide_index=True, use_container_width=False)
+            
+            return A, b, ""
+        else:
+            return None, None, "Could not parse equations"
+    
+    except Exception as e:
+        return None, None, f"Error parsing equations: {e}"
+
+
+def parse_linear_system(equations_str: str) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], int]:
+    """
+    Parse a string of linear equations into matrix A and vector b.
+    
+    Args:
+        equations_str: String containing linear equations, one per line
+    
+    Returns:
+        Tuple of (A, b, num_variables)
+    """
+    import re
+    
+    lines = [line.strip() for line in equations_str.strip().split('\n') if line.strip()]
+    
+    if not lines:
+        return None, None, 0
+    
+    # Find all variables used (x1, x2, x3, etc.)
+    all_vars = set()
+    for line in lines:
+        vars_found = re.findall(r'x(\d+)', line)
+        all_vars.update([int(v) for v in vars_found])
+    
+    if not all_vars:
+        return None, None, 0
+    
+    num_vars = max(all_vars)
+    num_equations = len(lines)
+    
+    A = np.zeros((num_equations, num_vars))
+    b = np.zeros(num_equations)
+    
+    for i, line in enumerate(lines):
+        # Split by '='
+        if '=' not in line:
+            continue
+        
+        left_side, right_side = line.split('=')
+        
+        # Parse right side (b value)
+        try:
+            b[i] = float(right_side.strip())
+        except ValueError:
+            b[i] = 0
+        
+        # Parse left side (coefficients)
+        left_side = left_side.replace(' ', '').replace('-', '+-')
+        terms = [t for t in left_side.split('+') if t]
+        
+        for term in terms:
+            # Match patterns like: 2x1, -3x2, x1, -x2
+            match = re.match(r'([+-]?\d*\.?\d*)x(\d+)', term)
+            if match:
+                coef_str = match.group(1)
+                var_idx = int(match.group(2)) - 1  # 0-indexed
+                
+                if coef_str in ['', '+']:
+                    coef = 1.0
+                elif coef_str == '-':
+                    coef = -1.0
+                else:
+                    coef = float(coef_str)
+                
+                if 0 <= var_idx < num_vars:
+                    A[i, var_idx] = coef
+    
+    return A, b, num_vars
+

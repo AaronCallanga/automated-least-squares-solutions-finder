@@ -93,6 +93,11 @@ def render_introduction():
         - **(AᵀA)⁻¹** is the inverse (like dividing by AᵀA)
         """)
         
+        st.markdown("""
+        > **Remark:** If A has a full column rank, then AᵀA is nonsingular (invertible) 
+        > and the least-squares solution is **unique**.
+        """)
+        
         st.markdown("---")
         st.markdown("### Real-World Example")
         st.markdown("""

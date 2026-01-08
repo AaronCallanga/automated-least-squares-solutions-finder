@@ -81,9 +81,10 @@ st.sidebar.header("Settings")
 # Input mode selection
 input_mode = st.sidebar.radio(
     "Choose input method:",
-    ["Data Points (Easy)", "Matrix Input (Advanced)"]
+    ["Data Points (Easy)", "Linear System (Equations)", "Matrix Input (Advanced)"]
 )
 is_data_points_mode = input_mode == "Data Points (Easy)"
+is_linear_system_mode = input_mode == "Linear System (Equations)"
 
 st.sidebar.markdown("---")
 
@@ -118,6 +119,20 @@ if is_data_points_mode:
     # Create design matrix for line fitting (y = mx + c)
     A = create_design_matrix(x_values)
     b = y_values
+
+elif is_linear_system_mode:
+    # Linear system mode: Enter equations directly
+    from components import render_linear_system_input
+    A, b, error_msg = render_linear_system_input()
+    
+    if error_msg:
+        st.error(f"{error_msg}")
+        st.stop()
+    
+    # For linear system mode, use first column as x values for visualization
+    if A is not None and A.shape[1] >= 1:
+        x_values = A[:, 0]
+
 else:
     # Advanced mode: Enter matrix A and vector b using editable tables
     A, b, error_msg = render_matrix_input()

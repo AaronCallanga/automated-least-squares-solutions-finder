@@ -8,6 +8,7 @@ Uses LaTeX bmatrix notation for all matrices and vectors.
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from utils.least_squares import LeastSquaresResult
 from utils.formatting import format_array, format_value
 
@@ -227,129 +228,228 @@ def render_final_result(result: LeastSquaresResult, is_data_points_mode: bool, u
 
 
 def render_visualization(result: LeastSquaresResult, is_data_points_mode: bool, x_values: np.ndarray = None):
-    """Render the matplotlib visualization with best-fit line and geometric interpretation."""
+    """Render visualizations: Matplotlib for best-fit line, Plotly for 3D geometric interpretation."""
     st.header("Visualization")
     
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    # Create tabs for different visualizations
+    tab1, tab2 = st.tabs(["Best-Fit Line / Solution", "3D Geometric Interpretation"])
     
-    # Plot 1: Data and best-fit line (for all modes)
-    ax1 = axes[0]
+    with tab1:
+        # Matplotlib visualization for data points and best-fit line
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        if x_values is not None and len(result.x_hat) >= 2:
+            # Scatter plot with best-fit line
+            ax.scatter(x_values, result.b, color='#667eea', s=100, zorder=5, 
+                       label='Data Points', edgecolors='white', linewidth=2)
+            x_line = np.linspace(min(x_values) - 0.5, max(x_values) + 0.5, 100)
+            y_line = result.x_hat[0] * x_line + result.x_hat[1]
+            ax.plot(x_line, y_line, color='#38ef7d', linewidth=3, 
+                    label=f'Best Fit: y = {result.x_hat[0]:.3f}x + {result.x_hat[1]:.3f}')
+            ax.set_xlabel('X', fontsize=12)
+            ax.set_ylabel('Y', fontsize=12)
+            ax.set_title('Data Points & Best-Fit Line', fontsize=14, fontweight='bold')
+            ax.legend(fontsize=10)
+        elif x_values is not None:
+            ax.scatter(x_values, result.b, color='#667eea', s=100, zorder=5, 
+                       label='Data Points', edgecolors='white', linewidth=2)
+            ax.set_xlabel('X', fontsize=12)
+            ax.set_ylabel('Y', fontsize=12)
+            ax.set_title('Data Points', fontsize=14, fontweight='bold')
+            ax.legend(fontsize=10)
+        else:
+            ax.bar(range(len(result.x_hat)), result.x_hat, color='#667eea', 
+                   edgecolor='white', linewidth=2)
+            ax.set_xlabel('Variable Index', fontsize=12)
+            ax.set_ylabel('Value', fontsize=12)
+            ax.set_title('Solution Values', fontsize=14, fontweight='bold')
+            ax.set_xticks(range(len(result.x_hat)))
+            ax.set_xticklabels([f'x_{i+1}' for i in range(len(result.x_hat))])
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        st.pyplot(fig)
     
-    if x_values is not None and len(result.x_hat) >= 2:
-        # Scatter plot with best-fit line
-        ax1.scatter(x_values, result.b, color='#667eea', s=100, zorder=5, 
-                   label='Data Points', edgecolors='white', linewidth=2)
-        x_line = np.linspace(min(x_values) - 0.5, max(x_values) + 0.5, 100)
-        y_line = result.x_hat[0] * x_line + result.x_hat[1]
-        ax1.plot(x_line, y_line, color='#38ef7d', linewidth=3, 
-                label=f'Best Fit: y = {result.x_hat[0]:.3f}x + {result.x_hat[1]:.3f}')
-        ax1.set_xlabel('X', fontsize=12)
-        ax1.set_ylabel('Y', fontsize=12)
-        ax1.set_title('Data Points & Best-Fit Line', fontsize=14, fontweight='bold')
-        ax1.legend(fontsize=10)
-    elif x_values is not None:
-        # Scatter plot only (for single variable)
-        ax1.scatter(x_values, result.b, color='#667eea', s=100, zorder=5, 
-                   label='Data Points', edgecolors='white', linewidth=2)
-        ax1.set_xlabel('X', fontsize=12)
-        ax1.set_ylabel('Y', fontsize=12)
-        ax1.set_title('Data Points', fontsize=14, fontweight='bold')
-        ax1.legend(fontsize=10)
-    else:
-        # Fallback: Bar chart for solution values
-        ax1.bar(range(len(result.x_hat)), result.x_hat, color='#667eea', 
-               edgecolor='white', linewidth=2)
-        ax1.set_xlabel('Variable Index', fontsize=12)
-        ax1.set_ylabel('Value', fontsize=12)
-        ax1.set_title('Solution Values', fontsize=14, fontweight='bold')
-        ax1.set_xticks(range(len(result.x_hat)))
-        ax1.set_xticklabels([f'x_{i+1}' for i in range(len(result.x_hat))])
-    ax1.grid(True, alpha=0.3)
+    with tab2:
+        # 3D Plotly visualization for geometric interpretation
+        render_3d_geometric_visualization(result)
+
+
+def render_3d_geometric_visualization(result: LeastSquaresResult):
+    """Render interactive 3D visualization of the column space projection."""
     
-    # Plot 2: Geometric Interpretation (Column Space Projection)
-    ax2 = axes[1]
-    
-    # For visualization, we'll show the relationship between b, Ax̂ (projection), and error
-    # Using first 2-3 components for visualization
     b = result.b
-    Ax_hat = result.predicted  # This is Ax̂
-    residual = result.residuals  # This is b - Ax̂
+    Ax_hat = result.predicted
+    A = result.A
     
-    n_dim = min(3, len(b))
+    # Pad vectors to 3D if needed
+    def to_3d(v):
+        if len(v) >= 3:
+            return v[:3]
+        elif len(v) == 2:
+            return np.array([v[0], v[1], 0])
+        else:
+            return np.array([v[0], 0, 0])
     
-    if n_dim >= 2:
-        # 2D visualization of vectors
-        ax2.set_xlim(-1, max(abs(b[:2].max()), abs(Ax_hat[:2].max())) * 1.5 + 1)
-        ax2.set_ylim(-1, max(abs(b[:2].max()), abs(Ax_hat[:2].max())) * 1.5 + 1)
-        
-        # Origin
-        origin = np.array([0, 0])
-        
-        # Draw b vector (target)
-        ax2.annotate('', xy=(b[0], b[1]), xytext=origin,
-                    arrowprops=dict(arrowstyle='->', color='#667eea', lw=2.5))
-        ax2.annotate(r'$\vec{b}$', xy=(b[0], b[1]), fontsize=14, color='#667eea',
-                    xytext=(5, 5), textcoords='offset points')
-        
-        # Draw Ax̂ vector (projection onto column space)
-        ax2.annotate('', xy=(Ax_hat[0], Ax_hat[1]), xytext=origin,
-                    arrowprops=dict(arrowstyle='->', color='#38ef7d', lw=2.5))
-        ax2.annotate(r'$A\hat{x}$', xy=(Ax_hat[0], Ax_hat[1]), fontsize=14, color='#38ef7d',
-                    xytext=(5, -15), textcoords='offset points')
-        
-        # Draw error vector (b - Ax̂) - from Ax̂ to b
-        ax2.annotate('', xy=(b[0], b[1]), xytext=(Ax_hat[0], Ax_hat[1]),
-                    arrowprops=dict(arrowstyle='->', color='#ff6b6b', lw=2, linestyle='--'))
-        mid_x = (b[0] + Ax_hat[0]) / 2
-        mid_y = (b[1] + Ax_hat[1]) / 2
-        ax2.annotate(r'$\vec{b} - A\hat{x}$', xy=(mid_x, mid_y), fontsize=12, color='#ff6b6b',
-                    xytext=(10, 0), textcoords='offset points')
-        
-        # Draw right angle indicator if error is perpendicular to Ax̂
-        # (showing orthogonality)
-        scale = 0.3
-        if np.linalg.norm(Ax_hat[:2]) > 0.1:
-            # Perpendicular indicator
-            perp_dir = np.array([-Ax_hat[1], Ax_hat[0]]) / np.linalg.norm(Ax_hat[:2]) * scale
-            corner = Ax_hat[:2] - Ax_hat[:2] / np.linalg.norm(Ax_hat[:2]) * scale
-            ax2.plot([corner[0], corner[0] + perp_dir[0]], 
-                    [corner[1], corner[1] + perp_dir[1]], 
-                    color='gray', lw=1)
-            ax2.plot([corner[0] + perp_dir[0], Ax_hat[0] + perp_dir[0]], 
-                    [corner[1] + perp_dir[1], Ax_hat[1] + perp_dir[1]], 
-                    color='gray', lw=1)
-        
-        # Labels and styling
-        ax2.axhline(y=0, color='gray', linestyle='-', lw=0.5)
-        ax2.axvline(x=0, color='gray', linestyle='-', lw=0.5)
-        ax2.set_xlabel('Component 1', fontsize=12)
-        ax2.set_ylabel('Component 2', fontsize=12)
-        ax2.set_title('Geometric Interpretation', fontsize=14, fontweight='bold')
-        ax2.set_aspect('equal', adjustable='box')
-        
-        # Legend
-        from matplotlib.lines import Line2D
-        legend_elements = [
-            Line2D([0], [0], color='#667eea', lw=2, label=r'$\vec{b}$ (target)'),
-            Line2D([0], [0], color='#38ef7d', lw=2, label=r'$A\hat{x}$ (projection)'),
-            Line2D([0], [0], color='#ff6b6b', lw=2, linestyle='--', label=r'$\vec{b} - A\hat{x}$ (error)')
-        ]
-        ax2.legend(handles=legend_elements, loc='upper left', fontsize=9)
-        
-        # Add column space label
-        ax2.text(0.95, 0.05, 'Col(A)', transform=ax2.transAxes, fontsize=12,
-                fontweight='bold', color='#764ba2', ha='right', va='bottom')
+    b_3d = to_3d(b)
+    Ax_hat_3d = to_3d(Ax_hat)
+    
+    # Get column vectors of A (for spanning the plane)
+    if A.shape[1] >= 2:
+        v1 = to_3d(A[:, 0])
+        v2 = to_3d(A[:, 1])
+    elif A.shape[1] == 1:
+        v1 = to_3d(A[:, 0])
+        v2 = np.array([0, 0, 1])  # Default second vector
     else:
-        # Fallback for 1D
-        ax2.bar(['b', 'Ax̂', 'b - Ax̂'], [b[0], Ax_hat[0], residual[0]], 
-               color=['#667eea', '#38ef7d', '#ff6b6b'])
-        ax2.set_ylabel('Value', fontsize=12)
-        ax2.set_title('Vector Components', fontsize=14, fontweight='bold')
+        v1 = np.array([1, 0, 0])
+        v2 = np.array([0, 1, 0])
     
-    ax2.grid(True, alpha=0.3)
+    # Create the figure
+    fig = go.Figure()
     
-    plt.tight_layout()
-    st.pyplot(fig)
+    # Calculate range for the plane
+    max_range = max(
+        np.max(np.abs(b_3d)) if len(b_3d) > 0 else 1,
+        np.max(np.abs(Ax_hat_3d)) if len(Ax_hat_3d) > 0 else 1,
+        np.max(np.abs(v1)) if len(v1) > 0 else 1,
+        np.max(np.abs(v2)) if len(v2) > 0 else 1
+    ) * 1.5
+    
+    # Create column space plane (Col A)
+    # Generate a mesh for the plane spanned by v1 and v2
+    s = np.linspace(-max_range, max_range, 10)
+    t = np.linspace(-max_range, max_range, 10)
+    S, T = np.meshgrid(s, t)
+    
+    # Plane: P = s*v1 + t*v2
+    X_plane = S * v1[0] + T * v2[0]
+    Y_plane = S * v1[1] + T * v2[1]
+    Z_plane = S * v1[2] + T * v2[2]
+    
+    # Add the column space plane (semi-transparent purple)
+    fig.add_trace(go.Surface(
+        x=X_plane, y=Y_plane, z=Z_plane,
+        colorscale=[[0, 'rgba(180, 120, 200, 0.3)'], [1, 'rgba(180, 120, 200, 0.3)']],
+        showscale=False,
+        name='Col(A)',
+        hoverinfo='name'
+    ))
+    
+    # Add column vectors v1 and v2 (orange)
+    fig.add_trace(go.Scatter3d(
+        x=[0, v1[0]], y=[0, v1[1]], z=[0, v1[2]],
+        mode='lines+markers',
+        marker=dict(size=5, color='#ff7f0e'),
+        line=dict(color='#ff7f0e', width=6),
+        name='v₁ (column 1)'
+    ))
+    
+    fig.add_trace(go.Scatter3d(
+        x=[0, v2[0]], y=[0, v2[1]], z=[0, v2[2]],
+        mode='lines+markers',
+        marker=dict(size=5, color='#ff7f0e'),
+        line=dict(color='#ff7f0e', width=6),
+        name='v₂ (column 2)'
+    ))
+    
+    # Add target vector b (red)
+    fig.add_trace(go.Scatter3d(
+        x=[0, b_3d[0]], y=[0, b_3d[1]], z=[0, b_3d[2]],
+        mode='lines+markers',
+        marker=dict(size=8, color='#d62728', symbol='diamond'),
+        line=dict(color='#d62728', width=6),
+        name='b (target)'
+    ))
+    
+    # Add b point marker
+    fig.add_trace(go.Scatter3d(
+        x=[b_3d[0]], y=[b_3d[1]], z=[b_3d[2]],
+        mode='markers+text',
+        marker=dict(size=10, color='#d62728'),
+        text=['b'],
+        textposition='top center',
+        textfont=dict(size=14, color='#d62728'),
+        name='b point',
+        showlegend=False
+    ))
+    
+    # Add projection Ax̂ (blue)
+    fig.add_trace(go.Scatter3d(
+        x=[0, Ax_hat_3d[0]], y=[0, Ax_hat_3d[1]], z=[0, Ax_hat_3d[2]],
+        mode='lines+markers',
+        marker=dict(size=8, color='#1f77b4'),
+        line=dict(color='#1f77b4', width=6),
+        name='Ax̂ (projection)'
+    ))
+    
+    # Add Ax̂ point marker
+    fig.add_trace(go.Scatter3d(
+        x=[Ax_hat_3d[0]], y=[Ax_hat_3d[1]], z=[Ax_hat_3d[2]],
+        mode='markers+text',
+        marker=dict(size=10, color='#1f77b4'),
+        text=['Ax̂'],
+        textposition='bottom center',
+        textfont=dict(size=14, color='#1f77b4'),
+        name='Ax̂ point',
+        showlegend=False
+    ))
+    
+    # Add error vector (dashed line from Ax̂ to b)
+    fig.add_trace(go.Scatter3d(
+        x=[Ax_hat_3d[0], b_3d[0]], y=[Ax_hat_3d[1], b_3d[1]], z=[Ax_hat_3d[2], b_3d[2]],
+        mode='lines',
+        line=dict(color='#ff6b6b', width=4, dash='dash'),
+        name='b - Ax̂ (error)'
+    ))
+    
+    # Add origin marker
+    fig.add_trace(go.Scatter3d(
+        x=[0], y=[0], z=[0],
+        mode='markers+text',
+        marker=dict(size=6, color='black'),
+        text=['O'],
+        textposition='bottom left',
+        textfont=dict(size=12),
+        name='Origin',
+        showlegend=False
+    ))
+    
+    # Update layout
+    fig.update_layout(
+        scene=dict(
+            xaxis_title='X',
+            yaxis_title='Y', 
+            zaxis_title='Z',
+            aspectmode='cube',
+            camera=dict(
+                eye=dict(x=1.5, y=1.5, z=1.0)
+            )
+        ),
+        title=dict(
+            text='Geometric Interpretation: Column Space Projection',
+            font=dict(size=16)
+        ),
+        legend=dict(
+            x=0.02, y=0.98,
+            bgcolor='rgba(255,255,255,0.8)'
+        ),
+        height=600,
+        margin=dict(l=0, r=0, t=40, b=0)
+    )
+    
+    # Add annotation explaining the visualization
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.info("""
+    **How to read this visualization:**
+    - **Purple plane** = Column space Col(A) - all possible outputs of A
+    - **Orange vectors** (v₁, v₂) = Columns of matrix A
+    - **Red point** (b) = Target vector (what we want)
+    - **Blue point** (Ax̂) = Best approximation (projection onto Col A)
+    - **Dashed line** = Error vector (perpendicular to the plane!)
+    
+    **Drag to rotate, scroll to zoom!**
+    """)
 
 
 def render_error_analysis(result: LeastSquaresResult, use_fractions: bool = False):

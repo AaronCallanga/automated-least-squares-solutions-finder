@@ -58,5 +58,23 @@ def apply_custom_styles():
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             margin: 1rem 0;
         }
+        
+        /* Center dataframes */
+        .centered-content {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .matrix-container {
+            text-align: center;
+        }
+        
+        /* Compact dataframe styling */
+        .stDataFrame {
+            margin: 0 auto;
+        }
     </style>
     """, unsafe_allow_html=True)

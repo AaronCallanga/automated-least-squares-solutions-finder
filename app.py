@@ -2,19 +2,21 @@
 Least Squares Calculator - Main Application
 
 A beginner-friendly calculator that demonstrates the least squares method
-step-by-step, using the Normal Equation: x̂ = (AᵀA)⁻¹Aᵀb
+step-by-step, using the Normal Equation: AᵀAx̂ = Aᵀb
 
 Application Flow:
     1. User selects input mode (Data Points or Matrix)
-    2. User enters their data
-    3. User clicks Calculate
-    4. App shows step-by-step solution
-    5. App displays visualization and error analysis
+    2. User selects display format (Decimal or Fraction)
+    3. User enters their data
+    4. User clicks Calculate
+    5. App shows step-by-step solution
+    6. App displays visualization and error analysis
 
 Project Structure:
     app.py              - Main application flow (this file)
     styles/css.py       - Custom CSS styles
     utils/least_squares.py - Core calculation logic
+    utils/formatting.py    - Number formatting (decimal/fraction)
     components/inputs.py   - Input form components
     components/display.py  - Output display components
 """
@@ -72,14 +74,31 @@ st.markdown("---")
 
 
 # =============================================================================
-# SIDEBAR - INPUT MODE SELECTION
+# SIDEBAR - SETTINGS
 # =============================================================================
 st.sidebar.header("⚙️ Settings")
+
+# Input mode selection
 input_mode = st.sidebar.radio(
     "Choose input method:",
     ["📊 Data Points (Easy)", "🔢 Matrix Input (Advanced)"]
 )
 is_data_points_mode = input_mode == "📊 Data Points (Easy)"
+
+st.sidebar.markdown("---")
+
+# Display format toggle
+st.sidebar.subheader("📐 Display Format")
+use_fractions = st.sidebar.toggle(
+    "Show as Fractions",
+    value=False,
+    help="Toggle between decimal and fraction display for matrices and results"
+)
+
+if use_fractions:
+    st.sidebar.info("📊 Displaying values as **fractions**")
+else:
+    st.sidebar.info("📊 Displaying values as **decimals**")
 
 
 # =============================================================================
@@ -133,23 +152,23 @@ if calculate:
     st.markdown("---")
     st.header("📝 Step-by-Step Solution")
     
-    render_step_problem(result)      # Step 1: Show A and b
-    render_step_transpose(result)    # Step 2: Calculate Aᵀ
-    render_step_ATA(result)          # Step 3: Calculate AᵀA
-    render_step_inverse(result)      # Step 4: Calculate (AᵀA)⁻¹
-    render_step_ATb(result)          # Step 5: Calculate Aᵀb
-    render_step_solution(result)     # Step 6: Calculate x̂
+    render_step_problem(result, use_fractions)      # Step 1: Show A and b
+    render_step_transpose(result, use_fractions)    # Step 2: Calculate Aᵀ
+    render_step_ATA(result, use_fractions)          # Step 3: Calculate AᵀA
+    render_step_inverse(result, use_fractions)      # Step 4: Calculate (AᵀA)⁻¹
+    render_step_ATb(result, use_fractions)          # Step 5: Calculate Aᵀb
+    render_step_solution(result, use_fractions)     # Step 6: Calculate x̂
     
     # Display final result
     st.markdown("---")
-    render_final_result(result, is_data_points_mode)
+    render_final_result(result, is_data_points_mode, use_fractions)
     
     # Display visualization
     st.markdown("---")
     render_visualization(result, is_data_points_mode, x_values)
     
     # Display error analysis
-    render_error_analysis(result)
+    render_error_analysis(result, use_fractions)
 
 
 # =============================================================================

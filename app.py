@@ -1,25 +1,3 @@
-"""
-Least Squares Calculator - Main Application
-
-A beginner-friendly calculator that demonstrates the least squares method
-step-by-step, using the Normal Equation: AᵀAx̂ = Aᵀb
-
-Application Flow:
-    1. User selects input mode (Data Points or Matrix)
-    2. User selects display format (Decimal or Fraction)
-    3. User enters their data
-    4. User clicks Calculate
-    5. App shows step-by-step solution
-    6. App displays visualization and error analysis
-
-Project Structure:
-    app.py              - Main application flow (this file)
-    styles/css.py       - Custom CSS styles
-    utils/least_squares.py - Core calculation logic
-    utils/formatting.py    - Number formatting (decimal/fraction)
-    components/inputs.py   - Input form components
-    components/display.py  - Output display components
-"""
 import streamlit as st
 import numpy as np
 
@@ -53,7 +31,7 @@ from components import (
 # PAGE CONFIGURATION
 # =============================================================================
 st.set_page_config(
-    page_title="Least Squares Calculator",
+    page_title="Automated Least Squares Solutions Finder",
     page_icon="📐",
     layout="wide"
 )
@@ -100,6 +78,16 @@ if use_fractions:
     st.sidebar.info("Displaying values as **fractions**")
 else:
     st.sidebar.info("Displaying values as **decimals**")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Group 1 | Automated Least Squares Solutions Finder")
+st.sidebar.markdown("""
+- Mark Jason Manlapaz
+- Jomar Escala 
+- Christine Rio 
+- Anthony Bonito 
+- Aaron Dave Callanga
+""")
 
 
 # =============================================================================

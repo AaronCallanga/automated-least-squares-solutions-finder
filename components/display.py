@@ -507,9 +507,6 @@ def render_3d_geometric_visualization(result: LeastSquaresResult):
         sign = '+' if coef >= 0 and i > 0 else ''
         parts.append(f"{sign}{coef:.2f} \\cdot v_{{{i+1}}}")
     
-    st.markdown("**Linear Combination (Projection):**")
-    st.latex(f"A\\hat{{x}} = {' '.join(parts)}")
-    
     # Info boxes
     col1, col2 = st.columns(2)
     with col1:
@@ -519,6 +516,7 @@ def render_3d_geometric_visualization(result: LeastSquaresResult):
         - **Colored arrows**: Column vectors v₁, v₂, ... ({num_cols} total)
         - **Red ◆**: Target vector b
         - **Blue ●**: Projection Ax̂ (on the plane)
+        - **Dashed line**: Error vector (b - Ax̂)
         """)
     with col2:
         st.info("""
@@ -526,8 +524,6 @@ def render_3d_geometric_visualization(result: LeastSquaresResult):
         The dashed error line (b - Ax̂) is **perpendicular** 
         to the column space plane. This is why least squares 
         gives the best approximation!
-        
-        🖱️ **Drag to rotate, scroll to zoom**
         """)
 
 
@@ -566,7 +562,7 @@ def render_footer():
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: #888; padding: 1rem;'>
-        <p>Least Squares Calculator | Built with Streamlit, NumPy & Matplotlib</p>
-        <p>Perfect for learning linear algebra</p>
+        <p>Least Squares Calculator | Built with Streamlit, NumPy, Matplotlib & Plotly</p>
+        <p>BSCS 2-3 | Group 1</p>
     </div>
     """, unsafe_allow_html=True)

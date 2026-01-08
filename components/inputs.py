@@ -8,7 +8,32 @@ Provides two input modes:
 """
 import streamlit as st
 import numpy as np
-from typing import Tuple, Optional
+import re
+from fractions import Fraction
+from typing import Tuple, Optional, List
+
+
+def parse_fraction(value_str: str) -> float:
+    """
+    Parse a string that could be a fraction (e.g., '1/2') or decimal.
+    
+    Args:
+        value_str: String like '1/2', '3/4', '2.5', or '3'
+    
+    Returns:
+        Float value
+    """
+    value_str = value_str.strip()
+    if not value_str:
+        return 0.0
+    
+    try:
+        if '/' in value_str:
+            return float(Fraction(value_str))
+        else:
+            return float(value_str)
+    except (ValueError, ZeroDivisionError):
+        return 0.0
 
 
 def render_data_points_input() -> Tuple[str, str]:
@@ -98,10 +123,7 @@ def render_matrix_input() -> Tuple[np.ndarray, np.ndarray, str]:
                         key=f"A_{i}_{j}",
                         label_visibility="collapsed"
                     )
-                    try:
-                        row_values.append(float(val) if val else 0.0)
-                    except ValueError:
-                        row_values.append(0.0)
+                    row_values.append(parse_fraction(val))
             A_values.append(row_values)
     
     with col_b:
@@ -122,10 +144,7 @@ def render_matrix_input() -> Tuple[np.ndarray, np.ndarray, str]:
                 key=f"b_{i}",
                 label_visibility="collapsed"
             )
-            try:
-                b_values.append(float(val) if val else 0.0)
-            except ValueError:
-                b_values.append(0.0)
+            b_values.append(parse_fraction(val))
     
     # Convert to numpy arrays
     try:
@@ -211,16 +230,16 @@ def render_linear_system_input() -> Tuple[np.ndarray, np.ndarray, str]:
     
     st.info("""
     **How to enter equations:**
-    - Use `x1`, `x2`, `x3`, etc. for variables
+    - Use any letters for variables: `a`, `b`, `c` or `x`, `y`, `z` or `x1`, `x2`, `x3`
     - Use `+` and `-` for operations
     - Each equation on a new line
-    - Example: `2x1 + 3x2 = 5` or `x1 - 2x2 + x3 = 10`
+    - Examples: `a + 2b = 4`, `2x - 3y + z = 5`, `x1 + x2 = 10`
     """)
     
     # Default example equations
-    default_equations = """x1 + 2x2 = 4
-2x1 - x2 = 3
-x1 + 3x2 = 6"""
+    default_equations = """a + 2b = 4
+2a - b = 3
+a + 3b = 6"""
     
     equations_input = st.text_area(
         "Enter your equations (one per line):",
@@ -231,24 +250,29 @@ x1 + 3x2 = 6"""
     
     # Parse the equations
     try:
-        A, b, num_vars = parse_linear_system(equations_input)
+        A, b, var_names = parse_linear_system(equations_input)
         
-        if A is not None:
-            # Show extracted matrices
+        if A is not None and len(var_names) > 0:
+            # Show extracted matrices using LaTeX
             st.markdown("---")
             st.markdown("**Extracted from equations:**")
             
-            col1, col2, col3 = st.columns([2, 1, 2])
-            with col1:
-                st.latex(r"A = ")
-                st.dataframe(A, hide_index=True, use_container_width=False)
-            with col2:
-                var_names = [f"x{i+1}" for i in range(num_vars)]
-                st.latex(r"\vec{x} = ")
-                st.write(var_names)
-            with col3:
-                st.latex(r"\vec{b} = ")
-                st.dataframe(b, hide_index=True, use_container_width=False)
+            # Build LaTeX for matrix A
+            A_rows = []
+            for row in A:
+                A_rows.append(" & ".join([str(int(v)) if v == int(v) else f"{v:.2f}" for v in row]))
+            A_latex = r"\begin{bmatrix}" + r"\\".join(A_rows) + r"\end{bmatrix}"
+            
+            # Build LaTeX for vector x (variable names)
+            x_latex = r"\begin{bmatrix}" + r"\\".join(var_names) + r"\end{bmatrix}"
+            
+            # Build LaTeX for vector b
+            b_latex = r"\begin{bmatrix}" + r"\\".join([str(int(v)) if v == int(v) else f"{v:.2f}" for v in b]) + r"\end{bmatrix}"
+            
+            # Display all inline
+            st.latex(r"A = " + A_latex)
+            st.latex(r"\vec{x} = " + x_latex)
+            st.latex(r"\vec{b} = " + b_latex)
             
             return A, b, ""
         else:
@@ -258,33 +282,42 @@ x1 + 3x2 = 6"""
         return None, None, f"Error parsing equations: {e}"
 
 
-def parse_linear_system(equations_str: str) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], int]:
+def parse_linear_system(equations_str: str) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], List[str]]:
     """
     Parse a string of linear equations into matrix A and vector b.
+    Supports flexible variable names: a, b, c or x, y, z or x1, x2, x3
     
     Args:
         equations_str: String containing linear equations, one per line
     
     Returns:
-        Tuple of (A, b, num_variables)
+        Tuple of (A, b, variable_names)
     """
-    import re
-    
     lines = [line.strip() for line in equations_str.strip().split('\n') if line.strip()]
     
     if not lines:
-        return None, None, 0
+        return None, None, []
     
-    # Find all variables used (x1, x2, x3, etc.)
+    # Find all variables used (letters or letter+number combinations)
     all_vars = set()
     for line in lines:
-        vars_found = re.findall(r'x(\d+)', line)
-        all_vars.update([int(v) for v in vars_found])
+        # Match patterns: single letters (a, b, x, y) or letter+number (x1, x2)
+        left_side = line.split('=')[0] if '=' in line else line
+        # Find all variable patterns
+        vars_found = re.findall(r'[a-zA-Z]\d*', left_side.replace(' ', ''))
+        # Filter out just coefficient-looking things
+        for v in vars_found:
+            if v and not v.replace('.', '').isdigit():
+                all_vars.add(v.lower())
     
     if not all_vars:
-        return None, None, 0
+        return None, None, []
     
-    num_vars = max(all_vars)
+    # Sort variables naturally
+    var_list = sorted(list(all_vars), key=lambda x: (len(x), x))
+    var_to_idx = {v: i for i, v in enumerate(var_list)}
+    
+    num_vars = len(var_list)
     num_equations = len(lines)
     
     A = np.zeros((num_equations, num_vars))
@@ -298,31 +331,28 @@ def parse_linear_system(equations_str: str) -> Tuple[Optional[np.ndarray], Optio
         left_side, right_side = line.split('=')
         
         # Parse right side (b value)
-        try:
-            b[i] = float(right_side.strip())
-        except ValueError:
-            b[i] = 0
+        b[i] = parse_fraction(right_side.strip())
         
         # Parse left side (coefficients)
         left_side = left_side.replace(' ', '').replace('-', '+-')
         terms = [t for t in left_side.split('+') if t]
         
         for term in terms:
-            # Match patterns like: 2x1, -3x2, x1, -x2
-            match = re.match(r'([+-]?\d*\.?\d*)x(\d+)', term)
+            # Match patterns like: 2a, -3b, a, -x, 2x1, x2
+            match = re.match(r'([+-]?[\d./]*)([a-zA-Z]\d*)', term)
             if match:
                 coef_str = match.group(1)
-                var_idx = int(match.group(2)) - 1  # 0-indexed
+                var_name = match.group(2).lower()
                 
                 if coef_str in ['', '+']:
                     coef = 1.0
                 elif coef_str == '-':
                     coef = -1.0
                 else:
-                    coef = float(coef_str)
+                    coef = parse_fraction(coef_str)
                 
-                if 0 <= var_idx < num_vars:
-                    A[i, var_idx] = coef
+                if var_name in var_to_idx:
+                    A[i, var_to_idx[var_name]] = coef
     
-    return A, b, num_vars
+    return A, b, var_list
 

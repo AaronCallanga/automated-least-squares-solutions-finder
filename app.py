@@ -81,10 +81,10 @@ st.sidebar.header("Settings")
 # Input mode selection
 input_mode = st.sidebar.radio(
     "Choose input method:",
-    ["Data Points (Easy)", "Linear System (Equations)", "Matrix Input (Advanced)"]
+    ["Data Points", "Linear System", "Matrix Input"]
 )
-is_data_points_mode = input_mode == "Data Points (Easy)"
-is_linear_system_mode = input_mode == "Linear System (Equations)"
+is_data_points_mode = input_mode == "Data Points"
+is_linear_system_mode = input_mode == "Linear System"
 
 st.sidebar.markdown("---")
 

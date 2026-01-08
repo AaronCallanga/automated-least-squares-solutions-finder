@@ -3,12 +3,28 @@ Display Components Module
 
 Handles all output rendering for the Least Squares Calculator.
 Each function renders a specific section of the step-by-step solution.
+Uses LaTeX bmatrix notation for all matrices and vectors.
 """
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from utils.least_squares import LeastSquaresResult
 from utils.formatting import format_array, format_value
+
+
+def matrix_to_latex(arr: np.ndarray, use_fractions: bool = False) -> str:
+    """Convert a numpy array to LaTeX bmatrix format."""
+    if arr.ndim == 1:
+        # Vector - single column
+        rows = [format_value(v, use_fractions) for v in arr]
+        return r"\begin{bmatrix}" + r"\\".join(rows) + r"\end{bmatrix}"
+    else:
+        # Matrix - multiple columns
+        rows = []
+        for row in arr:
+            row_str = " & ".join([format_value(v, use_fractions) for v in row])
+            rows.append(row_str)
+        return r"\begin{bmatrix}" + r"\\".join(rows) + r"\end{bmatrix}"
 
 
 def render_header():
@@ -40,7 +56,7 @@ def render_introduction():
         st.markdown("""
         **Error (Residual):**
         """)
-        st.latex(r"\|b - A\hat{x}\|")
+        st.latex(r"\|\vec{b} - A\hat{x}\|")
         st.markdown("""
         Where:
         - **A** = coefficient matrix (your data)
@@ -55,23 +71,20 @@ def render_step_problem(result: LeastSquaresResult, use_fractions: bool = False)
     st.markdown('<div class="step-box">', unsafe_allow_html=True)
     st.subheader("Step 1️⃣: Understanding the Problem")
     st.write("We want to solve **Ax = b** using the Normal Equation:")
-    st.latex(r"A^T A \hat{x} = A^T b")
+    st.latex(r"A^T A \hat{x} = A^T \vec{b}")
     
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        st.markdown('<div class="centered-content">', unsafe_allow_html=True)
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            st.write("**Matrix A:**")
-            st.dataframe(format_array(result.A, use_fractions), hide_index=True, use_container_width=False)
-            st.caption(f"Shape: {result.A.shape[0]} × {result.A.shape[1]}")
-        with c2:
-            st.write("**Vector b:**")
-            st.dataframe(format_array(result.b, use_fractions), hide_index=True, use_container_width=False)
-            st.caption(f"Shape: {len(result.b)} elements")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.write("Given:")
+    
+    # Matrix A
+    A_latex = matrix_to_latex(result.A, use_fractions)
+    st.latex(r"A = " + A_latex)
+    st.caption(f"Shape: {result.A.shape[0]} × {result.A.shape[1]}")
+    
+    # Vector b
+    b_latex = matrix_to_latex(result.b, use_fractions)
+    st.latex(r"\vec{b} = " + b_latex)
+    st.caption(f"Shape: {len(result.b)} elements")
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -80,13 +93,13 @@ def render_step_transpose(result: LeastSquaresResult, use_fractions: bool = Fals
     st.markdown('<div class="step-box">', unsafe_allow_html=True)
     st.subheader("Step 2️⃣: Calculate Aᵀ (Transpose of A)")
     st.write("The transpose flips rows and columns:")
-    st.latex(r"A^T = \text{swap rows and columns of } A")
     
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        st.write("**Aᵀ =**")
-        st.dataframe(format_array(result.A_transpose, use_fractions), hide_index=True, use_container_width=False)
-        st.caption(f"Shape: {result.A.shape} → {result.A_transpose.shape}")
+    A_latex = matrix_to_latex(result.A, use_fractions)
+    AT_latex = matrix_to_latex(result.A_transpose, use_fractions)
+    
+    st.latex(r"A^T = " + AT_latex)
+    st.caption(f"Shape: {result.A.shape} → {result.A_transpose.shape}")
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -95,13 +108,14 @@ def render_step_ATA(result: LeastSquaresResult, use_fractions: bool = False):
     st.markdown('<div class="step-box">', unsafe_allow_html=True)
     st.subheader("Step 3️⃣: Calculate AᵀA (Matrix Multiplication)")
     st.write("Multiply Aᵀ by A:")
-    st.latex(r"A^T A = A^T \times A")
     
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        st.write("**AᵀA =**")
-        st.dataframe(format_array(result.ATA, use_fractions), hide_index=True, use_container_width=False)
-        st.caption(f"Shape: {result.ATA.shape[0]} × {result.ATA.shape[1]} (square)")
+    AT_latex = matrix_to_latex(result.A_transpose, use_fractions)
+    A_latex = matrix_to_latex(result.A, use_fractions)
+    ATA_latex = matrix_to_latex(result.ATA, use_fractions)
+    
+    st.latex(r"A^T A = " + AT_latex + r" \cdot " + A_latex + r" = " + ATA_latex)
+    st.caption(f"Shape: {result.ATA.shape[0]} × {result.ATA.shape[1]} (square matrix)")
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -110,13 +124,12 @@ def render_step_inverse(result: LeastSquaresResult, use_fractions: bool = False)
     st.markdown('<div class="step-box">', unsafe_allow_html=True)
     st.subheader("Step 4️⃣: Calculate (AᵀA)⁻¹ (Inverse)")
     st.write("Find the inverse of AᵀA:")
-    st.latex(r"(A^T A)^{-1}")
     
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        st.write("**(AᵀA)⁻¹ =**")
-        st.dataframe(format_array(result.ATA_inverse, use_fractions), hide_index=True, use_container_width=False)
-        st.success("✅ Matrix is invertible!")
+    ATA_inv_latex = matrix_to_latex(result.ATA_inverse, use_fractions)
+    
+    st.latex(r"(A^T A)^{-1} = " + ATA_inv_latex)
+    st.success("✅ Matrix is invertible!")
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -125,12 +138,13 @@ def render_step_ATb(result: LeastSquaresResult, use_fractions: bool = False):
     st.markdown('<div class="step-box">', unsafe_allow_html=True)
     st.subheader("Step 5️⃣: Calculate Aᵀb")
     st.write("Multiply Aᵀ by b:")
-    st.latex(r"A^T b = A^T \times b")
     
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        st.write("**Aᵀb =**")
-        st.dataframe(format_array(result.ATb, use_fractions), hide_index=True, use_container_width=False)
+    AT_latex = matrix_to_latex(result.A_transpose, use_fractions)
+    b_latex = matrix_to_latex(result.b, use_fractions)
+    ATb_latex = matrix_to_latex(result.ATb, use_fractions)
+    
+    st.latex(r"A^T \vec{b} = " + AT_latex + r" \cdot " + b_latex + r" = " + ATb_latex)
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -139,7 +153,13 @@ def render_step_solution(result: LeastSquaresResult, use_fractions: bool = False
     st.markdown('<div class="step-box">', unsafe_allow_html=True)
     st.subheader("Step 6️⃣: Calculate x̂ = (AᵀA)⁻¹Aᵀb")
     st.write("Multiply (AᵀA)⁻¹ by Aᵀb to get our solution:")
-    st.latex(r"\hat{x} = (A^T A)^{-1} A^T b")
+    
+    ATA_inv_latex = matrix_to_latex(result.ATA_inverse, use_fractions)
+    ATb_latex = matrix_to_latex(result.ATb, use_fractions)
+    x_hat_latex = matrix_to_latex(result.x_hat, use_fractions)
+    
+    st.latex(r"\hat{x} = (A^T A)^{-1} A^T \vec{b} = " + ATA_inv_latex + r" \cdot " + ATb_latex + r" = " + x_hat_latex)
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 
@@ -148,20 +168,17 @@ def render_final_result(result: LeastSquaresResult, is_data_points_mode: bool, u
     st.markdown('<div class="result-box">', unsafe_allow_html=True)
     st.header("🎯 Final Solution")
     
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        st.write("**x̂ =**")
-        for i, val in enumerate(result.x_hat):
-            st.write(f"x_{i+1} = {format_value(val, use_fractions)}")
-        
-        if is_data_points_mode:
-            st.markdown("---")
-            st.subheader("📈 Best-Fit Line Equation:")
-            m, c = result.x_hat[0], result.x_hat[1]
-            if use_fractions:
-                st.latex(f"y = ({format_value(m, True)})x + ({format_value(c, True)})")
-            else:
-                st.latex(f"y = {m:.4f}x + {c:.4f}")
+    x_hat_latex = matrix_to_latex(result.x_hat, use_fractions)
+    st.latex(r"\hat{x} = " + x_hat_latex)
+    
+    if is_data_points_mode:
+        st.markdown("---")
+        st.subheader("📈 Best-Fit Line Equation:")
+        m, c = result.x_hat[0], result.x_hat[1]
+        if use_fractions:
+            st.latex(f"y = ({format_value(m, True)})x + ({format_value(c, True)})")
+        else:
+            st.latex(f"y = {m:.4f}x + {c:.4f}")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -222,39 +239,26 @@ def render_error_analysis(result: LeastSquaresResult, use_fractions: bool = Fals
     st.write("Finally, the least-square error is the norm of the vector:")
     
     # Build the LaTeX for vector subtraction: b - Ax̂ = [residuals]
-    b_vec = result.b
-    predicted = result.predicted
-    residuals = result.residuals
-    
-    # Format b vector for LaTeX
-    b_latex = r"\begin{bmatrix}" + r"\\".join([format_value(v, use_fractions) for v in b_vec]) + r"\end{bmatrix}"
-    
-    # Format Ax̂ (predicted) vector for LaTeX
-    pred_latex = r"\begin{bmatrix}" + r"\\".join([format_value(v, use_fractions) for v in predicted]) + r"\end{bmatrix}"
-    
-    # Format residuals vector for LaTeX
-    res_latex = r"\begin{bmatrix}" + r"\\".join([format_value(v, use_fractions) for v in residuals]) + r"\end{bmatrix}"
+    b_latex = matrix_to_latex(result.b, use_fractions)
+    pred_latex = matrix_to_latex(result.predicted, use_fractions)
+    res_latex = matrix_to_latex(result.residuals, use_fractions)
     
     # Display vector subtraction
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.latex(r"\vec{b} - A\hat{x} = " + b_latex + " - " + pred_latex + " = " + res_latex)
+    st.latex(r"\vec{b} - A\hat{x} = " + b_latex + " - " + pred_latex + " = " + res_latex)
     
     st.write("which is")
     
     # Build the norm calculation: ||b - Ax̂|| = √(sum of squares) ≈ result
-    squared_terms = [f"({format_value(r, use_fractions)})^2" for r in residuals]
+    squared_terms = [f"({format_value(r, use_fractions)})^2" for r in result.residuals]
     sum_of_squares_latex = " + ".join(squared_terms)
     
     # Calculate the norm
-    norm_value = np.sqrt(np.sum(residuals ** 2))
+    norm_value = np.sqrt(np.sum(result.residuals ** 2))
     
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.latex(
-            r"\|\vec{b} - A\hat{x}\| = \sqrt{" + sum_of_squares_latex + r"} = \sqrt{" + 
-            format_value(result.sse, use_fractions) + r"} \approx " + f"{norm_value:.4f}"
-        )
+    st.latex(
+        r"\|\vec{b} - A\hat{x}\| = \sqrt{" + sum_of_squares_latex + r"} = \sqrt{" + 
+        format_value(result.sse, use_fractions) + r"} \approx " + f"{norm_value:.4f}"
+    )
     
     st.info("💡 **Lower error values indicate a better fit!** The least squares method minimizes ‖b - Ax̂‖².")
 

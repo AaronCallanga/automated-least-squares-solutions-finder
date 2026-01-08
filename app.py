@@ -76,29 +76,29 @@ st.markdown("---")
 # =============================================================================
 # SIDEBAR - SETTINGS
 # =============================================================================
-st.sidebar.header("⚙️ Settings")
+st.sidebar.header("Settings")
 
 # Input mode selection
 input_mode = st.sidebar.radio(
     "Choose input method:",
-    ["📊 Data Points (Easy)", "🔢 Matrix Input (Advanced)"]
+    ["Data Points (Easy)", "Matrix Input (Advanced)"]
 )
-is_data_points_mode = input_mode == "📊 Data Points (Easy)"
+is_data_points_mode = input_mode == "Data Points (Easy)"
 
 st.sidebar.markdown("---")
 
 # Display format toggle
-st.sidebar.subheader("📐 Display Format")
+st.sidebar.subheader("Display Format")
 use_fractions = st.sidebar.toggle(
     "Show as Fractions",
-    value=False,
+    value=True,
     help="Toggle between decimal and fraction display for matrices and results"
 )
 
 if use_fractions:
-    st.sidebar.info("📊 Displaying values as **fractions**")
+    st.sidebar.info("Displaying values as **fractions**")
 else:
-    st.sidebar.info("📊 Displaying values as **decimals**")
+    st.sidebar.info("Displaying values as **decimals**")
 
 
 # =============================================================================
@@ -112,27 +112,30 @@ if is_data_points_mode:
     x_values, y_values, error_msg = parse_data_points(x_input, y_input)
     
     if error_msg:
-        st.error(f"❌ {error_msg}")
+        st.error(f"{error_msg}")
         st.stop()
     
     # Create design matrix for line fitting (y = mx + c)
     A = create_design_matrix(x_values)
     b = y_values
 else:
-    # Advanced mode: Enter matrix A and vector b directly
-    a_input, b_input = render_matrix_input()
-    A, b, error_msg = parse_matrix_input(a_input, b_input)
+    # Advanced mode: Enter matrix A and vector b using editable tables
+    A, b, error_msg = render_matrix_input()
     
     if error_msg:
-        st.error(f"❌ {error_msg}")
+        st.error(f"{error_msg}")
         st.stop()
+    
+    # For matrix mode, use first column as x values for visualization
+    if A is not None and A.shape[1] >= 1:
+        x_values = A[:, 0]
 
 
 # =============================================================================
 # CALCULATE BUTTON
 # =============================================================================
 st.markdown("---")
-calculate = st.button("🚀 Calculate Least Squares Solution", type="primary", use_container_width=True)
+calculate = st.button("Calculate Least Squares Solution", type="primary", use_container_width=True)
 
 
 # =============================================================================
@@ -150,7 +153,7 @@ if calculate:
     
     # Display step-by-step solution
     st.markdown("---")
-    st.header("📝 Step-by-Step Solution")
+    st.header("Step-by-Step Solution")
     
     render_step_problem(result, use_fractions)      # Step 1: Show A and b
     render_step_transpose(result, use_fractions)    # Step 2: Calculate Aᵀ

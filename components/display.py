@@ -280,176 +280,255 @@ def render_3d_geometric_visualization(result: LeastSquaresResult):
     b = result.b
     Ax_hat = result.predicted
     A = result.A
+    x_hat = result.x_hat
     
-    # Pad vectors to 3D if needed
+    num_rows = A.shape[0]
+    num_cols = A.shape[1]
+    
+    # For higher dimensional data, show a warning
+    if num_rows > 3:
+        st.warning(f"""
+        **Note:** Your system has {num_rows} dimensions, but we can only visualize 3 dimensions.  
+        This 3D plot shows the **first 3 components** of each vector.  
+        The mathematical calculations are still done in full {num_rows}D space!
+        """)
+    
+    # Pad or truncate vectors to 3D
     def to_3d(v):
+        v = np.asarray(v, dtype=float)
         if len(v) >= 3:
             return v[:3]
         elif len(v) == 2:
-            return np.array([v[0], v[1], 0])
+            return np.array([v[0], v[1], 0.0])
+        elif len(v) == 1:
+            return np.array([v[0], 0.0, 0.0])
         else:
-            return np.array([v[0], 0, 0])
+            return np.array([0.0, 0.0, 0.0])
     
     b_3d = to_3d(b)
     Ax_hat_3d = to_3d(Ax_hat)
     
-    # Get column vectors of A (for spanning the plane)
-    if A.shape[1] >= 2:
-        v1 = to_3d(A[:, 0])
-        v2 = to_3d(A[:, 1])
-    elif A.shape[1] == 1:
-        v1 = to_3d(A[:, 0])
-        v2 = np.array([0, 0, 1])  # Default second vector
-    else:
-        v1 = np.array([1, 0, 0])
-        v2 = np.array([0, 1, 0])
+    # Get column vectors of A (in 3D)
+    column_vectors = [to_3d(A[:, i]) for i in range(num_cols)]
+    
+    # Colors for column vectors
+    col_colors = ['#ff7f0e', '#2ca02c', '#9467bd', '#8c564b', '#e377c2', '#bcbd22']
     
     # Create the figure
     fig = go.Figure()
     
-    # Calculate range for the plane
-    max_range = max(
-        np.max(np.abs(b_3d)) if len(b_3d) > 0 else 1,
-        np.max(np.abs(Ax_hat_3d)) if len(Ax_hat_3d) > 0 else 1,
-        np.max(np.abs(v1)) if len(v1) > 0 else 1,
-        np.max(np.abs(v2)) if len(v2) > 0 else 1
-    ) * 1.5
+    # Calculate range for visualization
+    all_vectors = [b_3d, Ax_hat_3d] + column_vectors
+    max_val = max([np.max(np.abs(v)) for v in all_vectors] + [1])
+    max_range = max_val * 1.3
     
-    # Create column space plane (Col A)
-    # Generate a mesh for the plane spanned by v1 and v2
-    s = np.linspace(-max_range, max_range, 10)
-    t = np.linspace(-max_range, max_range, 10)
-    S, T = np.meshgrid(s, t)
+    # === Column Space Plane (Col A) ===
+    if num_cols >= 2:
+        v1, v2 = column_vectors[0], column_vectors[1]
+        
+        # Create a finer mesh for the plane
+        s = np.linspace(-max_range, max_range, 25)
+        t = np.linspace(-max_range, max_range, 25)
+        S, T = np.meshgrid(s, t)
+        
+        X_plane = S * v1[0] + T * v2[0]
+        Y_plane = S * v1[1] + T * v2[1]
+        Z_plane = S * v1[2] + T * v2[2]
+        
+        # Purple semi-transparent plane
+        fig.add_trace(go.Surface(
+            x=X_plane, y=Y_plane, z=Z_plane,
+            colorscale=[[0, 'rgba(160, 100, 200, 0.35)'], [1, 'rgba(180, 120, 220, 0.35)']],
+            showscale=False,
+            name='Col(A) - Column Space',
+            hoverinfo='name',
+            opacity=0.5,
+            contours=dict(
+                x=dict(show=True, color='rgba(150,100,200,0.2)', width=1),
+                y=dict(show=True, color='rgba(150,100,200,0.2)', width=1)
+            )
+        ))
+    elif num_cols == 1:
+        v1 = column_vectors[0]
+        t_vals = np.linspace(-max_range, max_range, 100)
+        fig.add_trace(go.Scatter3d(
+            x=t_vals * v1[0], y=t_vals * v1[1], z=t_vals * v1[2],
+            mode='lines',
+            line=dict(color='rgba(160, 100, 200, 0.6)', width=10),
+            name='Col(A) - Column Space (line)'
+        ))
     
-    # Plane: P = s*v1 + t*v2
-    X_plane = S * v1[0] + T * v2[0]
-    Y_plane = S * v1[1] + T * v2[1]
-    Z_plane = S * v1[2] + T * v2[2]
+    # === Column vectors with arrowheads ===
+    for i, v in enumerate(column_vectors):
+        color = col_colors[i % len(col_colors)]
+        v_len = np.linalg.norm(v)
+        
+        if v_len > 0.01:
+            # Vector line
+            fig.add_trace(go.Scatter3d(
+                x=[0, v[0]], y=[0, v[1]], z=[0, v[2]],
+                mode='lines',
+                line=dict(color=color, width=6),
+                name=f'v{i+1} (column {i+1})'
+            ))
+            
+            # Arrowhead cone
+            v_norm = v / v_len
+            arrow_size = max_range * 0.06
+            fig.add_trace(go.Cone(
+                x=[v[0]], y=[v[1]], z=[v[2]],
+                u=[v_norm[0]], v=[v_norm[1]], w=[v_norm[2]],
+                sizemode='absolute', sizeref=arrow_size,
+                colorscale=[[0, color], [1, color]],
+                showscale=False, showlegend=False, hoverinfo='skip'
+            ))
     
-    # Add the column space plane (semi-transparent purple)
-    fig.add_trace(go.Surface(
-        x=X_plane, y=Y_plane, z=Z_plane,
-        colorscale=[[0, 'rgba(180, 120, 200, 0.3)'], [1, 'rgba(180, 120, 200, 0.3)']],
-        showscale=False,
-        name='Col(A)',
-        hoverinfo='name'
-    ))
+    # === Target vector b (red) ===
+    b_len = np.linalg.norm(b_3d)
+    if b_len > 0.01:
+        fig.add_trace(go.Scatter3d(
+            x=[0, b_3d[0]], y=[0, b_3d[1]], z=[0, b_3d[2]],
+            mode='lines',
+            line=dict(color='#d62728', width=6),
+            name='b (target vector)'
+        ))
+        b_norm = b_3d / b_len
+        fig.add_trace(go.Cone(
+            x=[b_3d[0]], y=[b_3d[1]], z=[b_3d[2]],
+            u=[b_norm[0]], v=[b_norm[1]], w=[b_norm[2]],
+            sizemode='absolute', sizeref=max_range * 0.06,
+            colorscale=[[0, '#d62728'], [1, '#d62728']],
+            showscale=False, showlegend=False, hoverinfo='skip'
+        ))
     
-    # Add column vectors v1 and v2 (orange)
-    fig.add_trace(go.Scatter3d(
-        x=[0, v1[0]], y=[0, v1[1]], z=[0, v1[2]],
-        mode='lines+markers',
-        marker=dict(size=5, color='#ff7f0e'),
-        line=dict(color='#ff7f0e', width=6),
-        name='v₁ (column 1)'
-    ))
-    
-    fig.add_trace(go.Scatter3d(
-        x=[0, v2[0]], y=[0, v2[1]], z=[0, v2[2]],
-        mode='lines+markers',
-        marker=dict(size=5, color='#ff7f0e'),
-        line=dict(color='#ff7f0e', width=6),
-        name='v₂ (column 2)'
-    ))
-    
-    # Add target vector b (red)
-    fig.add_trace(go.Scatter3d(
-        x=[0, b_3d[0]], y=[0, b_3d[1]], z=[0, b_3d[2]],
-        mode='lines+markers',
-        marker=dict(size=8, color='#d62728', symbol='diamond'),
-        line=dict(color='#d62728', width=6),
-        name='b (target)'
-    ))
-    
-    # Add b point marker
+    # b label
     fig.add_trace(go.Scatter3d(
         x=[b_3d[0]], y=[b_3d[1]], z=[b_3d[2]],
         mode='markers+text',
-        marker=dict(size=10, color='#d62728'),
-        text=['b'],
-        textposition='top center',
-        textfont=dict(size=14, color='#d62728'),
-        name='b point',
-        showlegend=False
+        marker=dict(size=10, color='#d62728', symbol='diamond'),
+        text=['b'], textposition='top right',
+        textfont=dict(size=18, color='#d62728', family='Arial Black'),
+        showlegend=False, hoverinfo='text', hovertext='Target b'
     ))
     
-    # Add projection Ax̂ (blue)
-    fig.add_trace(go.Scatter3d(
-        x=[0, Ax_hat_3d[0]], y=[0, Ax_hat_3d[1]], z=[0, Ax_hat_3d[2]],
-        mode='lines+markers',
-        marker=dict(size=8, color='#1f77b4'),
-        line=dict(color='#1f77b4', width=6),
-        name='Ax̂ (projection)'
-    ))
+    # === Projection Ax̂ (blue) ===
+    Ax_len = np.linalg.norm(Ax_hat_3d)
+    if Ax_len > 0.01:
+        fig.add_trace(go.Scatter3d(
+            x=[0, Ax_hat_3d[0]], y=[0, Ax_hat_3d[1]], z=[0, Ax_hat_3d[2]],
+            mode='lines',
+            line=dict(color='#1f77b4', width=6),
+            name='Ax̂ (projection onto Col A)'
+        ))
+        Ax_norm = Ax_hat_3d / Ax_len
+        fig.add_trace(go.Cone(
+            x=[Ax_hat_3d[0]], y=[Ax_hat_3d[1]], z=[Ax_hat_3d[2]],
+            u=[Ax_norm[0]], v=[Ax_norm[1]], w=[Ax_norm[2]],
+            sizemode='absolute', sizeref=max_range * 0.06,
+            colorscale=[[0, '#1f77b4'], [1, '#1f77b4']],
+            showscale=False, showlegend=False, hoverinfo='skip'
+        ))
     
-    # Add Ax̂ point marker
+    # Ax̂ label
     fig.add_trace(go.Scatter3d(
         x=[Ax_hat_3d[0]], y=[Ax_hat_3d[1]], z=[Ax_hat_3d[2]],
         mode='markers+text',
-        marker=dict(size=10, color='#1f77b4'),
-        text=['Ax̂'],
-        textposition='bottom center',
-        textfont=dict(size=14, color='#1f77b4'),
-        name='Ax̂ point',
-        showlegend=False
+        marker=dict(size=10, color='#1f77b4', symbol='circle'),
+        text=['Ax̂'], textposition='bottom left',
+        textfont=dict(size=18, color='#1f77b4', family='Arial Black'),
+        showlegend=False, hoverinfo='text', hovertext='Projection Ax̂'
     ))
     
-    # Add error vector (dashed line from Ax̂ to b)
+    # === Error vector (dashed line from Ax̂ to b) ===
     fig.add_trace(go.Scatter3d(
         x=[Ax_hat_3d[0], b_3d[0]], y=[Ax_hat_3d[1], b_3d[1]], z=[Ax_hat_3d[2], b_3d[2]],
         mode='lines',
-        line=dict(color='#ff6b6b', width=4, dash='dash'),
-        name='b - Ax̂ (error)'
+        line=dict(color='#e74c3c', width=5, dash='dash'),
+        name='b - Ax̂ (error vector)'
     ))
     
-    # Add origin marker
+    # === Origin marker ===
     fig.add_trace(go.Scatter3d(
         x=[0], y=[0], z=[0],
         mode='markers+text',
-        marker=dict(size=6, color='black'),
-        text=['O'],
-        textposition='bottom left',
-        textfont=dict(size=12),
-        name='Origin',
-        showlegend=False
+        marker=dict(size=8, color='black'),
+        text=['O'], textposition='bottom left',
+        textfont=dict(size=14, color='black'),
+        showlegend=False, hoverinfo='text', hovertext='Origin'
     ))
     
-    # Update layout
+    # === Layout ===
     fig.update_layout(
         scene=dict(
-            xaxis_title='X',
-            yaxis_title='Y', 
-            zaxis_title='Z',
+            xaxis=dict(
+                title='Component 1',
+                range=[-max_range, max_range],
+                showgrid=True, gridcolor='rgba(180,180,180,0.4)',
+                zerolinecolor='rgba(0,0,0,0.4)', zerolinewidth=2,
+                showbackground=True, backgroundcolor='rgba(245,245,250,0.95)'
+            ),
+            yaxis=dict(
+                title='Component 2',
+                range=[-max_range, max_range],
+                showgrid=True, gridcolor='rgba(180,180,180,0.4)',
+                zerolinecolor='rgba(0,0,0,0.4)', zerolinewidth=2,
+                showbackground=True, backgroundcolor='rgba(245,250,245,0.95)'
+            ),
+            zaxis=dict(
+                title='Component 3',
+                range=[-max_range, max_range],
+                showgrid=True, gridcolor='rgba(180,180,180,0.4)',
+                zerolinecolor='rgba(0,0,0,0.4)', zerolinewidth=2,
+                showbackground=True, backgroundcolor='rgba(250,245,245,0.95)'
+            ),
             aspectmode='cube',
-            camera=dict(
-                eye=dict(x=1.5, y=1.5, z=1.0)
-            )
-        ),
-        title=dict(
-            text='Geometric Interpretation: Column Space Projection',
-            font=dict(size=16)
+            camera=dict(eye=dict(x=1.6, y=1.6, z=1.0))
         ),
         legend=dict(
-            x=0.02, y=0.98,
-            bgcolor='rgba(255,255,255,0.8)'
+            x=0.01, y=0.99,
+            bgcolor='rgba(255,255,255,0.95)',
+            bordercolor='rgba(100,100,100,0.3)',
+            borderwidth=1,
+            font=dict(size=11)
         ),
-        height=600,
-        margin=dict(l=0, r=0, t=40, b=0)
+        height=700,
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor='white'
     )
     
-    # Add annotation explaining the visualization
     st.plotly_chart(fig, use_container_width=True)
     
-    st.info("""
-    **How to read this visualization:**
-    - **Purple plane** = Column space Col(A) - all possible outputs of A
-    - **Orange vectors** (v₁, v₂) = Columns of matrix A
-    - **Red point** (b) = Target vector (what we want)
-    - **Blue point** (Ax̂) = Best approximation (projection onto Col A)
-    - **Dashed line** = Error vector (perpendicular to the plane!)
+    # === Mathematical relationship ===
+    st.markdown("---")
     
-    **Drag to rotate, scroll to zoom!**
-    """)
+    # Build the linear combination LaTeX
+    parts = []
+    for i, coef in enumerate(x_hat):
+        sign = '+' if coef >= 0 and i > 0 else ''
+        parts.append(f"{sign}{coef:.2f} \\cdot v_{{{i+1}}}")
+    
+    st.markdown("**Linear Combination (Projection):**")
+    st.latex(f"A\\hat{{x}} = {' '.join(parts)}")
+    
+    # Info boxes
+    col1, col2 = st.columns(2)
+    with col1:
+        st.success(f"""
+        **What you see:**
+        - **Purple plane**: Column space Col(A)
+        - **Colored arrows**: Column vectors v₁, v₂, ... ({num_cols} total)
+        - **Red ◆**: Target vector b
+        - **Blue ●**: Projection Ax̂ (on the plane)
+        """)
+    with col2:
+        st.info("""
+        **Key Insight:**
+        The dashed error line (b - Ax̂) is **perpendicular** 
+        to the column space plane. This is why least squares 
+        gives the best approximation!
+        
+        🖱️ **Drag to rotate, scroll to zoom**
+        """)
 
 
 def render_error_analysis(result: LeastSquaresResult, use_fractions: bool = False):

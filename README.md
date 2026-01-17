@@ -87,7 +87,7 @@ streamlit run app.py
 
 ---
 
-## Group 1 | Automated Least Squares Solutions Finder
+## Group 1 | BSCS 2-3 | Automated Least Squares Solutions Finder 
 
 Names:
 - Mark Jason Manlapaz

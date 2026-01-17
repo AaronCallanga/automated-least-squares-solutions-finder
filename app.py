@@ -20,6 +20,7 @@ from components import (
     render_step_inverse,
     render_step_ATb,
     render_step_solution,
+    render_quick_answer,
     render_final_result,
     render_visualization,
     render_error_analysis,
@@ -153,6 +154,10 @@ if calculate:
     if not result.is_valid:
         st.error(f"❌ {result.error_message}")
         st.stop()
+    
+    # Display quick answer first
+    st.markdown("---")
+    render_quick_answer(result, is_data_points_mode, use_fractions)
     
     # Display step-by-step solution
     st.markdown("---")

@@ -207,6 +207,32 @@ def render_step_solution(result: LeastSquaresResult, use_fractions: bool = False
     st.markdown('</div>', unsafe_allow_html=True)
 
 
+def render_quick_answer(result: LeastSquaresResult, is_data_points_mode: bool, use_fractions: bool = False):
+    """Render the quick answer box showing final solution and error before step-by-step."""
+    st.markdown('<div class="result-box">', unsafe_allow_html=True)
+    st.header("Answer")
+    
+    # Show x̂ solution
+    x_hat_latex = matrix_to_latex(result.x_hat, use_fractions)
+    st.latex(r"\hat{x} = " + x_hat_latex)
+    
+    # If data points mode, show best-fit line
+    if is_data_points_mode and len(result.x_hat) >= 2:
+        m, c = result.x_hat[0], result.x_hat[1]
+        if use_fractions:
+            st.latex(f"y = ({format_value(m, True)})x + ({format_value(c, True)})")
+        else:
+            st.latex(f"y = {m:.4f}x + {c:.4f}")
+    
+    st.markdown("---")
+    
+    # Show least squares error
+    norm_value = np.sqrt(np.sum(result.residuals ** 2))
+    st.latex(r"\text{Least-Squares Error: } \|\vec{b} - A\hat{x}\| = " + f"{norm_value:.4f}")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
 def render_final_result(result: LeastSquaresResult, is_data_points_mode: bool, use_fractions: bool = False):
     """Render the final solution box."""
     st.markdown('<div class="result-box">', unsafe_allow_html=True)
@@ -562,7 +588,7 @@ def render_footer():
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: #888; padding: 1rem;'>
-        <p>Least Squares Calculator | Built with Streamlit, NumPy, Matplotlib & Plotly</p>
+        <p>Automated Least Squares Solutions Finder | Built with Streamlit, NumPy, Matplotlib & Plotly</p>
         <p>BSCS 2-3 | Group 1</p>
     </div>
     """, unsafe_allow_html=True)

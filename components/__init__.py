@@ -9,6 +9,7 @@ from .display import (
     render_step_inverse,
     render_step_ATb,
     render_step_solution,
+    render_quick_answer,
     render_final_result,
     render_visualization,
     render_error_analysis,

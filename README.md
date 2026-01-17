@@ -1,8 +1,8 @@
-# Least Squares Calculator
+# Automated Least Squares Solutions Finder
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://automated-least-squares-solutions-finder.streamlit.app/)
 
-An interactive, beginner-friendly calculator that demonstrates the **Least Squares Method** step-by-step using the Normal Equation.
+An interactive, beginner-friendly calculator that demonstrates the **Least Squares Approximation** step-by-step using the Normal Equation.
 
 $$A^T A \hat{x} = A^T \vec{b}$$
 

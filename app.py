@@ -1,11 +1,11 @@
 import streamlit as st
 import numpy as np
 
-# Import our modules
-from styles import apply_custom_styles
-from utils import LeastSquaresSolver
-from utils.least_squares import create_design_matrix
-from components import (
+# Import our modules from src/
+from src.styles import apply_custom_styles
+from src.utils import LeastSquaresSolver
+from src.utils.least_squares import create_design_matrix
+from src.components import (
     # Input components
     render_data_points_input,
     render_matrix_input,

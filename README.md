@@ -44,15 +44,19 @@ $$A^T A \hat{x} = A^T \vec{b}$$
 linalg/
 ├── app.py                    # Main application entry point
 ├── requirements.txt          # Python dependencies
-├── styles/
-│   └── css.py               # Custom CSS styles
-├── utils/
-│   ├── least_squares.py     # Core calculation logic
-│   └── formatting.py        # Number formatting (decimal/fraction)
-├── components/
-│   ├── inputs.py            # Input form components
-│   └── display.py           # Output display components
-└── references/              # Reference images
+├── README.md
+├── src/
+│   ├── components/
+│   │   ├── __init__.py
+│   │   ├── display.py       # Output display components
+│   │   └── inputs.py        # Input form components
+│   ├── styles/
+│   │   ├── __init__.py
+│   │   └── css.py           # Custom CSS styles
+│   └── utils/
+│       ├── __init__.py
+│       ├── least_squares.py # Core calculation logic
+│       └── formatting.py    # Number formatting (decimal/fraction)
 ```
 
 ---

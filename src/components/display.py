@@ -9,8 +9,8 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-from utils.least_squares import LeastSquaresResult
-from utils.formatting import format_array, format_value
+from src.utils.least_squares import LeastSquaresResult
+from src.utils.formatting import format_array, format_value
 
 
 def matrix_to_latex(arr: np.ndarray, use_fractions: bool = False) -> str:

@@ -159,6 +159,10 @@ if calculate:
     st.markdown("---")
     render_quick_answer(result, is_data_points_mode, use_fractions)
     
+    # Display visualization right after answer
+    st.markdown("---")
+    render_visualization(result, is_data_points_mode, x_values)
+    
     # Display step-by-step solution
     st.markdown("---")
     st.header("Step-by-Step Solution")
@@ -181,16 +185,11 @@ if calculate:
     with st.expander("Step 6: Calculate x̂ = (AᵀA)⁻¹Aᵀb", expanded=False):
         render_step_solution(result, use_fractions)
     
-    # Display final result
-    st.markdown("---")
-    render_final_result(result, is_data_points_mode, use_fractions)
+    with st.expander("Step 7: Final Solution", expanded=False):
+        render_final_result(result, is_data_points_mode, use_fractions)
     
-    # Display visualization
-    st.markdown("---")
-    render_visualization(result, is_data_points_mode, x_values)
-    
-    # Display error analysis
-    render_error_analysis(result, use_fractions)
+    with st.expander("Step 8: Least-Squares Error Calculation", expanded=False):
+        render_error_analysis(result, use_fractions)
 
 
 # =============================================================================

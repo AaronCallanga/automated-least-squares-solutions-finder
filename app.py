@@ -163,12 +163,23 @@ if calculate:
     st.markdown("---")
     st.header("Step-by-Step Solution")
     
-    render_step_problem(result, use_fractions)      # Step 1: Show A and b
-    render_step_transpose(result, use_fractions)    # Step 2: Calculate Aᵀ
-    render_step_ATA(result, use_fractions)          # Step 3: Calculate AᵀA
-    render_step_inverse(result, use_fractions)      # Step 4: Calculate (AᵀA)⁻¹
-    render_step_ATb(result, use_fractions)          # Step 5: Calculate Aᵀb
-    render_step_solution(result, use_fractions)     # Step 6: Calculate x̂
+    with st.expander("Step 1: Problem Setup (Matrix A and Vector b)", expanded=False):
+        render_step_problem(result, use_fractions)
+    
+    with st.expander("Step 2: Calculate Aᵀ (Transpose)", expanded=False):
+        render_step_transpose(result, use_fractions)
+    
+    with st.expander("Step 3: Calculate AᵀA", expanded=False):
+        render_step_ATA(result, use_fractions)
+    
+    with st.expander("Step 4: Calculate (AᵀA)⁻¹ (Inverse)", expanded=False):
+        render_step_inverse(result, use_fractions)
+    
+    with st.expander("Step 5: Calculate Aᵀb", expanded=False):
+        render_step_ATb(result, use_fractions)
+    
+    with st.expander("Step 6: Calculate x̂ = (AᵀA)⁻¹Aᵀb", expanded=False):
+        render_step_solution(result, use_fractions)
     
     # Display final result
     st.markdown("---")
